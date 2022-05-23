@@ -68,14 +68,14 @@ collectHeaders names req = Taggant $ toJSON $ M.fromList
 
 data Config = Config
   { headerName :: CI B.ByteString
-  , requestToTaggant :: Request -> Taggant
+  , fromRequest :: Request -> Taggant
   -- ^ custom function that obtains a taggant from a wai 'Request'.
   }
 
 defaultConfig :: Config
 defaultConfig = Config
   { headerName = "X-TAGGANT"
-  , requestToTaggant = mempty
+  , fromRequest = mempty
   }
 
 data Context = Context
@@ -100,7 +100,7 @@ parseTaggant bs = Taggant $ case J.decode $ BL.fromStrict bs of
 middleware :: Config -> Middleware
 middleware config@Config{..} app req sendResp = do
   let tag = maybe mempty parseTaggant $ lookup headerName $ requestHeaders req
-  let cxt = Context config $ tag <> requestToTaggant req
+  let cxt = Context config $ tag <> fromRequest req
   app
     req { vault = Vault.insert vaultKey cxt (vault req) }
     sendResp
