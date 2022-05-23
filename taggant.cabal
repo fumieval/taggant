@@ -1,0 +1,42 @@
+cabal-version:      2.4
+name:               taggant
+version:            0.1.0.0
+synopsis:           Improve WAI applications' inspectability via metadata on an HTTP header
+
+-- A longer description of the package.
+-- description:
+
+-- A URL where users can report bugs.
+-- bug-reports:
+
+-- The license under which the package is released.
+-- license:
+author:             Fumiaki Kinoshita
+maintainer:         fumiaki.kinoshita@herp.co.jp
+
+-- A copyright notice.
+-- copyright:
+-- category:
+extra-source-files: CHANGELOG.md
+
+library
+    exposed-modules:  Taggant
+
+    -- Modules included in this library but not exported.
+    -- other-modules:
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:    base >=4.12 && <5
+        , aeson
+        , bytestring
+        , case-insensitive
+        , containers
+        , http-client
+        , text
+        , unordered-containers
+        , vault
+        , wai
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options: -Wall -Wcompat
