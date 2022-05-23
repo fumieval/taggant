@@ -83,6 +83,9 @@ data Context = Context
   , taggant :: Taggant
   }
 
+instance Show Context where
+  show = show . taggant
+
 instance ToJSON Context where
   toJSON = toJSON . taggant
 
