@@ -6,6 +6,7 @@
 module Taggant
   ( Taggant(..),
   Config(..),
+  collectHeaders,
   Context(..),
   defaultConfig,
   middleware,
@@ -59,21 +60,31 @@ vaultKey :: Vault.Key Context
 vaultKey = unsafePerformIO Vault.newKey
 {-# NOINLINE vaultKey #-}
 
+collectHeaders :: [CI B.ByteString] -> Request -> Taggant
+collectHeaders names req = Taggant $ toJSON $ M.fromList
+  [ (lenientDecode $ foldedCase k, fmap lenientDecode $ lookup k $ requestHeaders req)
+  | k <- names
+  ]
+
 data Config = Config
   { headerName :: CI B.ByteString
-  , extraHeaders :: [CI B.ByteString]
+  , requestToTaggant :: Request -> Taggant
+  -- ^ custom function that obtains a taggant from a wai 'Request'.
   }
 
 defaultConfig :: Config
 defaultConfig = Config
   { headerName = "X-TAGGANT"
-  , extraHeaders = []
+  , requestToTaggant = mempty
   }
 
 data Context = Context
   { config :: Config
   , taggant :: Taggant
   }
+
+instance ToJSON Context where
+  toJSON = toJSON . taggant
 
 lenientDecode :: B.ByteString -> T.Text
 lenientDecode = T.decodeUtf8With T.lenientDecode
@@ -85,12 +96,8 @@ parseTaggant bs = Taggant $ case J.decode $ BL.fromStrict bs of
 
 middleware :: Config -> Middleware
 middleware config@Config{..} app req sendResp = do
-  let lookupHeader k = lookup k (requestHeaders req)
-  let tag = maybe mempty parseTaggant $ lookupHeader headerName
-  let extra = M.fromList
-        [ (lenientDecode $ foldedCase k, fmap lenientDecode $ lookupHeader k)
-        | k <- extraHeaders ]
-  let cxt = Context config $ tag <> Taggant (toJSON extra)
+  let tag = maybe mempty parseTaggant $ lookup headerName $ requestHeaders req
+  let cxt = Context config $ tag <> requestToTaggant req
   app
     req { vault = Vault.insert vaultKey cxt (vault req) }
     sendResp
