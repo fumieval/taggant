@@ -26,7 +26,7 @@ import qualified Data.HashMap.Strict as KM
 import qualified Data.Map.Strict as M
 import qualified Data.Vault.Lazy as Vault
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Encoding.Error as T
@@ -35,7 +35,10 @@ import Network.Wai
 import System.IO.Unsafe
 
 newtype Taggant = Taggant { unTaggant :: J.Value }
-  deriving (Show, Eq, Ord, FromJSON, ToJSON)
+  deriving (Eq, Ord, FromJSON, ToJSON)
+
+instance Show Taggant where
+  show = BL.unpack . J.encode
 
 instance Monoid Taggant where
   mempty = Taggant Null
