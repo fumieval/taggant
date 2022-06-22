@@ -5,10 +5,7 @@
 {-# LANGUAGE StrictData #-}
 module Taggant
   ( Taggant(..),
-  Config(..),
   collectHeaders,
-  Context(..),
-  defaultConfig,
   middleware,
   fromVault,
   fromWaiRequest,
@@ -56,7 +53,7 @@ mergeValues (Array xs) y = Array (xs <> pure y)
 mergeValues x (Array ys) = Array (pure x <> ys)
 mergeValues x y = Array $ pure x <> pure y
 
-vaultKey :: Vault.Key Context
+vaultKey :: Vault.Key Taggant
 vaultKey = unsafePerformIO Vault.newKey
 {-# NOINLINE vaultKey #-}
 
@@ -66,28 +63,8 @@ collectHeaders names req = Taggant $ toJSON $ M.fromList
   | k <- names
   ]
 
-data Config = Config
-  { headerName :: CI B.ByteString
-  , fromRequest :: Request -> Taggant
-  -- ^ custom function that obtains a taggant from a wai 'Request'.
-  }
-
-defaultConfig :: Config
-defaultConfig = Config
-  { headerName = "X-TAGGANT"
-  , fromRequest = mempty
-  }
-
-data Context = Context
-  { config :: Config
-  , taggant :: Taggant
-  }
-
-instance Show Context where
-  show = show . taggant
-
-instance ToJSON Context where
-  toJSON = toJSON . taggant
+headerName :: CI B.ByteString
+headerName = "X-TAGGANT"
 
 lenientDecode :: B.ByteString -> T.Text
 lenientDecode = T.decodeUtf8With T.lenientDecode
@@ -97,28 +74,26 @@ parseTaggant bs = Taggant $ case J.decode $ BL.fromStrict bs of
   Nothing -> J.String $ lenientDecode bs
   Just obj -> obj
 
-middleware :: Config -> Middleware
-middleware config@Config{..} app req sendResp = do
+middleware :: Middleware
+middleware app req sendResp = do
   let tag = maybe mempty parseTaggant $ lookup headerName $ requestHeaders req
-  let cxt = Context config $ tag <> fromRequest req
   app
-    req { vault = Vault.insert vaultKey cxt (vault req) }
+    req { vault = Vault.insert vaultKey tag (vault req) }
     sendResp
 
-fromVault :: Vault.Vault -> Maybe Context
-fromVault = Vault.lookup vaultKey
+fromVault :: Vault.Vault -> Taggant
+fromVault = maybe mempty id . Vault.lookup vaultKey
 
-fromWaiRequest :: Request -> Maybe Context
+fromWaiRequest :: Request -> Taggant
 fromWaiRequest = fromVault . vault
 
-alterClientRequest :: Maybe Context -> HC.Request -> HC.Request
-alterClientRequest Nothing req = req
-alterClientRequest (Just Context{..}) req = req
-    { HC.requestHeaders
-      = (headerName config, BL.toStrict $ J.encode taggant)
-      : HC.requestHeaders req
-    }
+alterClientRequest :: Taggant -> HC.Request -> HC.Request
+alterClientRequest taggant req = req
+  { HC.requestHeaders
+    = (headerName, BL.toStrict $ J.encode taggant)
+    : HC.requestHeaders req
+  }
 
-alterClientManager :: Maybe Context -> HC.Manager -> HC.Manager
+alterClientManager :: Taggant -> HC.Manager -> HC.Manager
 alterClientManager cxt man = man
   { HC.mModifyRequest = HC.mModifyRequest man . alterClientRequest cxt }
