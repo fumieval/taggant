@@ -44,6 +44,9 @@ instance Monoid Taggant where
 instance Semigroup Taggant where
   Taggant a <> Taggant b = Taggant $ mergeValues a b
 
+instance J.KeyValue Taggant where
+  k .= v = Taggant $ J.Object $ k .= v
+
 mergeValues :: Value -> Value -> Value
 mergeValues (Array xs) (Array ys) = Array $ xs <> ys
 mergeValues (Object xs) (Object ys) = Object $ KM.unionWith mergeValues xs ys
