@@ -2,18 +2,19 @@ Usage
 ----
 
 Taggants are metadata passed around via the `X-TAGGANT` http header.
-You can improve the tracability by logging its contents
 
 Apply `Taggant.middleware` to your WAI application to keep track of taggants.
 
 ```haskell
 import Taggant qualified
 
-application = Taggant.middleware Taggant.defaultConfig $ ...
+application = Taggant.middleware $ ...
 ```
 
-If a taggant is present, the middleware stores it in the Request's vault. Apply `fromWaiRequest` to the request to read the taggant.
+This middleware stores the taggant in the Request's [vault](https://hackage.haskell.org/package/wai-3.2.3/docs/Network-Wai.html#v:vault). Apply `fromWaiRequest` to read the taggant.
 
 ```haskell
-fromWaiRequest :: Request -> Maybe Context
+fromWaiRequest :: Request -> Taggant
 ```
+
+You can pass the taggant to the logger, and/or other applications so that the trace of the request chain is more visible.

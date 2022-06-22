@@ -5,12 +5,16 @@
 {-# LANGUAGE StrictData #-}
 module Taggant
   ( Taggant(..),
-  collectHeaders,
+  headerName,
+  -- * wai
   middleware,
   fromVault,
   fromWaiRequest,
+  -- * http-client
   alterClientRequest,
   alterClientManager,
+  -- * Utility
+  collectHeaders,
   )
   where
 
@@ -60,12 +64,14 @@ vaultKey :: Vault.Key Taggant
 vaultKey = unsafePerformIO Vault.newKey
 {-# NOINLINE vaultKey #-}
 
+-- | Construct a 'Taggant' from a set of headers
 collectHeaders :: [CI B.ByteString] -> Request -> Taggant
 collectHeaders names req = Taggant $ toJSON $ M.fromList
   [ (lenientDecode $ foldedCase k, fmap lenientDecode $ lookup k $ requestHeaders req)
   | k <- names
   ]
 
+-- | The name of the taggant header (@"X-TAGGANT"@).
 headerName :: CI B.ByteString
 headerName = "X-TAGGANT"
 
